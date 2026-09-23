@@ -10,8 +10,7 @@ This project models opinion dynamics and social influence. Each person is repres
 
 The environment can influence opinion through exposure, conformity, persuasion, identity, and algorithms. The goal is to explore how individual opinions change and how collective patterns such as consensus, polarization, or echo chambers can emerge.
 
-## To be defined
+## License
 
-- **Model to be modeled:** TBD (to be selected from typical opinion dynamics models)
-- **License:** TBD
+- The code is licensed under GNU/GPL v3.0.
 
