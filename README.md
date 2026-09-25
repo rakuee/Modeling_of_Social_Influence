@@ -1,4 +1,4 @@
-# Modeling_of_Social_Influence
+## Modeling_of_Social_Influence_in_Elections
 
 ## Question to answer
 
