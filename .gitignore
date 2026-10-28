@@ -216,3 +216,27 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Ejecutables
+programa
+programa.exe
+*.out
+a.out
+
+# Objetos y librerías
+*.o
+*.obj
+*.a
+*.so
+*.dylib
+
+# Resultados de la simulación
+resultados_*.csv
+*.png
+
+# Editor / SO
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
