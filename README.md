@@ -1,203 +1,217 @@
 # Simulación de Elecciones Presidenciales en México
 ## Modelo Basado en Agentes con Monte Carlo e Interacción Social
 
-Este proyecto implementa una simulación computacional para estudiar la evolución de las preferencias electorales durante una campaña presidencial en México. El modelo combina **Modelado Basado en Agentes (ABM)**, **simulación de Monte Carlo**, distintos **niveles de agregación** y un módulo explícito de **interacción social** que determina si un votante cambia o mantiene su decisión a lo largo de la campaña.
+Simulación computacional que combina **Modelado Basado en Agentes (ABM)**, **Monte Carlo** y **dinámicas de opinión** para estudiar cómo evolucionan las preferencias electorales durante una campaña presidencial en México, analizando la robustez de los pronósticos frente a la incertidumbre en las interacciones sociales.
 
 ---
 
-##  Metodología
+## Metodología
 
 ### 1. Modelado Basado en Agentes (ABM)
-Cada votante se representa como un **agente autónomo** con:
-- Atributos sociodemográficos (educación, edad, vivienda, ideología).
-- Preferencia política inicial (probabilidad de voto por cada candidato).
-- **Un entorno social** compuesto por familiares, amigos, vecinos y contactos en redes sociales.
-- Reglas de actualización de opinión basadas en:
-  - **Interacciones con su entorno social** (ver Sección 4).
-  - Exposición a eventos de campaña (debates, escándalos, anuncios).
-  - Voto estratégico cerca del día de la elección.
 
-El ABM permite capturar **heterogeneidad individual** y **efectos emergentes** que no se observan en modelos agregados.
+Cada votante es un agente con atributos sociodemográficos (educación, edad, vivienda, ideología), una preferencia política inicial y un **entorno social** (familiares, amigos, vecinos, redes digitales). Las decisiones individuales se actualizan mediante reglas de influencia social, exposición a eventos de campaña y voto estratégico. El ABM captura heterogeneidad individual y efectos emergentes que los modelos agregados no observan.
 
 ### 2. Simulación de Monte Carlo
-Se utiliza Monte Carlo para:
-- Muestrear parámetros inciertos (pesos de influencia, volatilidad, abstención, tamaño de redes).
-- Generar múltiples ejecuciones (por ejemplo, 1,000 simulaciones) y obtener distribuciones de resultados.
-- Calcular intervalos de confianza y probabilidades de victoria para cada candidato.
 
-Formalmente, si $\theta$ es el vector de parámetros del modelo y $f(\theta)$ es una cantidad de interés (por ejemplo, la cuota de voto final de un candidato), el estimador de Monte Carlo es:
+Se realizan \(N\) ejecuciones independientes muestreando parámetros inciertos (pesos de influencia, volatilidad, abstención, tamaño de redes). El estimador Monte Carlo de una cantidad de interés es:
 
 $$
 \hat{f}_N = \frac{1}{N} \sum_{k=1}^{N} f(\theta_k), \quad \theta_k \sim p(\theta)
 $$
 
-donde $N$ es el número de simulaciones y $p(\theta)$ es la distribución de probabilidad de los parámetros. El error estándar del estimador decrece como:
+| Variable | Significado |
+|---|---|
+| \(N\) | Número de ejecuciones Monte Carlo (escenarios simulados) |
+| \(\theta_k\) | Vector de parámetros del modelo en la ejecución \(k\) |
+| \(p(\theta)\) | Distribución de probabilidad de los parámetros |
+| \(f(\theta_k)\) | Cantidad de interés evaluada en el escenario \(k\) (p. ej., cuota de voto final) |
+| \(\hat{f}_N\) | Estimador Monte Carlo de \(f\) (promedio sobre los \(N\) escenarios) |
 
-$$
-\text{SE}(\hat{f}_N) = \frac{\sigma_f}{\sqrt{N}}
-$$
-
-lo que justifica el uso de un número elevado de ejecuciones para reducir la incertidumbre.
-
-Cada ejecución representa un escenario posible de la elección, lo que permite analizar la robustez de los pronósticos frente a la incertidumbre en las interacciones sociales.
+El error estándar del estimador decrece como \(\text{SE}(\hat{f}_N) = \sigma_f / \sqrt{N}\), lo que justifica usar un \(N\) elevado para reducir la incertidumbre. Cada ejecución representa un escenario electoral posible.
 
 ### 3. Niveles de Agregación
-El modelo opera en dos niveles complementarios:
-- **Nivel individual (agente):** cada votante toma decisiones según sus atributos y su entorno social.
-- **Nivel agregado:** los votos se agrupan por sección electoral, distrito federal, entidad federativa y total nacional.
 
-La agregación se define formalmente como:
+El modelo opera en dos niveles: **individual** (cada agente decide según sus atributos y entorno) y **agregado** (los votos se agrupan por sección electoral, distrito, entidad y total nacional):
 
 $$
 V_{\text{agregado}} = \sum_{i \in \mathcal{G}} v_i
 $$
 
-donde $\mathcal{G}$ es el conjunto de agentes que pertenecen a la unidad territorial considerada y $v_i \in \{0, 1\}$ indica si el agente $i$ votó por el candidato de interés.
+| Variable | Significado |
+|---|---|
+| \(\mathcal{G}\) | Conjunto de agentes que pertenecen a la unidad territorial considerada |
+| \(v_i\) | Indicador binario: \(1\) si el agente \(i\) votó por el candidato de interés, \(0\) en otro caso |
+| \(V_{\text{agregado}}\) | Total de votos por el candidato en la unidad territorial |
 
-Esto facilita la validación con datos reales del INE y permite observar patrones territoriales.
+Esto facilita la validación con datos del INE y la observación de patrones territoriales.
 
-### 4. Interacción Social y Cambio de Decisión
-Este es el mecanismo que responde a la pregunta central: **¿cómo y cuándo un votante cambia de opinión?**
+---
 
-#### 4.1. Estructura del entorno social
-Cada agente está inmerso en una red social con tres capas:
-- **Lazos fuertes:** familiares y amigos cercanos (alta confianza, alta frecuencia de contacto).
-- **Lazos débiles:** vecinos, compañeros de trabajo o escuela (confianza media, contacto ocasional).
-- **Lazos digitales:** contactos en redes sociales (confianza variable, alta exposición a opiniones diversas).
+## Interacción Social y Cambio de Decisión
 
-La red se construye con un modelo de **red libre de escala (Barabási–Albert)** o **small-world (Watts–Strogatz)**, calibrado con datos de redes sociales en México.
+### Estructura del entorno social
 
-#### 4.2. Regla de actualización de opinión: Confianza Acotada (Bounded Confidence)
-Un agente $i$ solo es influenciado por otro agente $j$ si la **distancia ideológica** entre ellos es menor que un umbral de tolerancia $\epsilon$:
+Cada agente está inmerso en una red con **lazos fuertes** (familiares, amigos), **débiles** (vecinos, compañeros) y **digitales** (redes sociales). La red se construye con modelos **Barabási–Albert** (libre de escala) o **Watts–Strogatz** (mundo pequeño), calibrados con datos de redes sociales en México.
+
+### Regla de confianza acotada (Bounded Confidence)
+
+Un agente \(i\) solo es influenciado por \(j\) si su distancia ideológica es menor que un umbral de tolerancia:
 
 $$
 |x_i - x_j| < \epsilon
 $$
 
-donde $x_i$ y $x_j$ son las posiciones ideológicas (escala 0–10). Si la diferencia supera $\epsilon$, el agente $i$ **ignora o rechaza** la opinión de $j$ (efecto de polarización).
+| Variable | Significado |
+|---|---|
+| \(x_i\) | Posición ideológica del agente \(i\) (escala 0–10) |
+| \(x_j\) | Posición ideológica del agente \(j\) (escala 0–10) |
+| \(\epsilon\) | Umbral de tolerancia ideológica; si la distancia lo supera, \(i\) ignora a \(j\) (polarización) |
 
-#### 4.3. Ecuación de cambio de preferencia
-La probabilidad de que el agente $i$ adopte la preferencia del agente $j$ en un paso de tiempo $t$ está dada por:
+### Probabilidad de adopción de preferencia
 
 $$
 P(i \to j) = w_{ij} \cdot \frac{1}{1 + |x_i - x_j|} \cdot \mathbb{1}_{|x_i - x_j| < \epsilon}
 $$
 
-Donde:
-- $w_{ij}$: peso del lazo social (fuerte, débil o digital).
-- $\dfrac{1}{1 + |x_i - x_j|}$: penalización por distancia ideológica.
-- $\mathbb{1}_{|x_i - x_j| < \epsilon}$: indicador de confianza acotada ($1$ si se cumple, $0$ si no).
+| Variable | Significado |
+|---|---|
+| \(P(i \to j)\) | Probabilidad de que el agente \(i\) adopte la preferencia de \(j\) |
+| \(w_{ij}\) | Peso del lazo social entre \(i\) y \(j\) (fuerte, débil o digital) |
+| \(1/(1 + \|x_i - x_j\|)\) | Penalización por distancia ideológica (a mayor distancia, menor peso) |
+| \(\mathbb{1}_{\|x_i - x_j\| < \epsilon}\) | Indicador: vale \(1\) si se cumple la confianza acotada, \(0\) si no |
 
-#### 4.4. Actualización de la posición ideológica
-Cuando el agente $i$ es influenciado por $j$, su posición ideológica se actualiza como un promedio ponderado:
+### Actualización de la posición ideológica
 
 $$
-x_i(t+1) = x_i(t) + \mu \cdot w_{ij} \cdot \left( x_j(t) - x_i(t) \right)
+x_i(t+1) = x_i(t) + \mu \cdot w_{ij} \cdot (x_j(t) - x_i(t))
 $$
 
-donde $\mu \in (0, 1]$ es la **tasa de convergencia** (qué tan rápido se deja influenciar). Si $\mu = 1$, el agente adopta completamente la posición del otro; si $\mu \to 0$, apenas se mueve.
+| Variable | Significado |
+|---|---|
+| \(x_i(t)\) | Posición ideológica del agente \(i\) en el paso \(t\) |
+| \(x_j(t)\) | Posición ideológica del agente \(j\) (fuente de influencia) en el paso \(t\) |
+| \(x_i(t+1)\) | Posición actualizada del agente \(i\) |
+| \(\mu\) | Tasa de convergencia \(\in (0,1]\); \(\mu=1\) adopta totalmente la posición de \(j\), \(\mu \to 0\) apenas se mueve |
+| \(w_{ij}\) | Peso del lazo social entre \(i\) y \(j\) |
 
-#### 4.5. Factores que modulan la influencia social
-| Factor | Efecto en el cambio de decisión |
+### Factores que modulan la influencia
+
+| Factor | Efecto |
 |---|---|
 | **Fuerza del lazo** | Lazos fuertes pesan más que débiles; digitales dependen del algoritmo. |
-| **Distancia ideológica** | A mayor distancia, menor probabilidad de cambio (salvo umbral $\epsilon$). |
-| **Educación** | Mayor educación → mayor resistencia a la influencia de lazos débiles. |
+| **Distancia ideológica** | A mayor distancia, menor probabilidad de cambio. |
+| **Educación** | Mayor educación → mayor resistencia a lazos débiles. |
 | **Edad** | Jóvenes más influenciables por lazos digitales; adultos mayores por lazos fuertes. |
-| **Vivienda** | Entornos con mejores condiciones → mayor exposición a opiniones diversas. |
-| **Ideología** | Agentes extremos tienen umbrales $\epsilon$ más pequeños (menos tolerancia). |
+| **Vivienda** | Mejores condiciones → mayor exposición a opiniones diversas. |
+| **Ideología** | Agentes extremos tienen umbrales \(\epsilon\) más pequeños (menos tolerancia). |
 
-#### 4.6. Dinámica temporal
-En cada iteración (un día de campaña):
-1. Cada agente selecciona aleatoriamente a un contacto de su red.
-2. Se evalúa la regla de confianza acotada: $|x_i - x_j| < \epsilon$.
-3. Si se cumple, se actualiza la posición con probabilidad $P(i \to j)$.
+### Dinámica temporal (un día de campaña)
+
+1. Cada agente selecciona aleatoriamente un contacto de su red.
+2. Se evalúa la regla de confianza acotada: \(|x_i - x_j| < \epsilon\).
+3. Si se cumple, se actualiza la posición con probabilidad \(P(i \to j)\).
 4. Se registra el cambio (o no) en la intención de voto.
 
-Este proceso se repite hasta el día de la elección, generando una **trayectoria de decisión** por agente que puede compararse con encuestas panel.
+El proceso se repite hasta el día de la elección, generando una trayectoria de decisión por agente comparable con encuestas panel.
 
 ---
 
-##  Modelo Matemático del Voto (Hotelling-Downs)
+## Modelo Matemático del Voto (Hotelling-Downs)
 
-Como complemento al ABM, el proyecto incorpora el marco de **Hotelling-Downs** reformulado desde la física estadística, que permite calcular la cuota de voto de cada candidato en función de su posición espacial.
+Marco de competencia espacial reformulado desde la física estadística para calcular la cuota de voto de cada candidato según su posición.
 
-### Ecuación base del conteo de votos
-
-La cuota de voto $V$ de un partido se define como la integral de la densidad de votantes $W(\vec{x})$ sobre su región de Voronoi:
+### Cuota base (región de Voronoi)
 
 $$
 V = \iint_{\text{Voronoi}} W(\vec{x}) \, d\vec{x} \tag{1}
 $$
 
-### Ecuación con efecto de la abstención
+| Variable | Significado |
+|---|---|
+| \(V\) | Cuota de voto del partido (sin efectos de abstención ni activistas) |
+| \(W(\vec{x})\) | Densidad de votantes en la posición ideológica \(\vec{x}\) |
+| \(\vec{x}\) | Vector de posición en el espacio ideológico |
+| \(\text{Voronoi}\) | Región del espacio donde el partido es el más cercano al votante |
 
-Introduciendo un factor de atenuación por alienación, con parámetro $\tau$ que mide la propensión a la abstención:
+### Efecto de la abstención
 
 $$
 V_T = \int_{\text{Voronoi}} \frac{W(\vec{x})}{\left(1 + (\vec{x} - \vec{x_p})^2\right)^{\tau}} \, d\vec{x} \tag{2}
 $$
 
-donde $\vec{x_p}$ es la posición del partido. Cuando $\tau \to 0$, la ecuación se reduce a la base (participación total).
+| Variable | Significado |
+|---|---|
+| \(V_T\) | Cuota de voto ajustada por abstención |
+| \(\vec{x_p}\) | Posición ideológica del partido |
+| \(\tau\) | Propensión a la abstención por alienación; \(\tau \to 0\) recupera la ecuación base |
+| \((\vec{x} - \vec{x_p})^2\) | Distancia cuadrática entre votante y partido |
 
-### Ecuación con activistas (sesgo hacia los extremos)
-
-Añadiendo un peso adicional $|\vec{x}|^{2\alpha}$ que refleja la influencia desproporcionada de los votantes extremos:
+### Efecto de los activistas (sesgo hacia extremos)
 
 $$
 V_{T,A} = \int_{\text{Voronoi}} \frac{W(\vec{x}) \, |\vec{x}|^{2\alpha}}{\left(1 + (\vec{x} - \vec{x_p})^2\right)^{\tau}} \, d\vec{x} \tag{3}
 $$
 
-donde $\alpha$ controla la fuerza de la influencia de los extremistas.
+| Variable | Significado |
+|---|---|
+| \(V_{T,A}\) | Cuota de voto ajustada por abstención **y** activistas |
+| \(\alpha\) | Fuerza de la influencia de votantes extremos; \(\alpha > 0\) sesga hacia los polos |
+| \(\|\vec{x}\|^{2\alpha}\) | Peso extra a votantes alejados del centro ideológico |
 
 ### Dinámica de los partidos: Algoritmo de Metropolis
 
-Los partidos ajustan sus posiciones mediante el **algoritmo de Metropolis**, aceptando un nuevo vector de políticas con probabilidad:
+Los partidos ajustan sus posiciones aceptando un nuevo vector de políticas con probabilidad:
 
 $$
 P(V_1, V_2) = e^{(V_2 - V_1)/T}
 $$
 
-donde $V_1$ es la cuota de voto actual, $V_2$ la nueva, y $T$ es un parámetro de volatilidad análogo a la temperatura.
+| Variable | Significado |
+|---|---|
+| \(P(V_1, V_2)\) | Probabilidad de aceptar el cambio de posición |
+| \(V_1\) | Cuota de voto con la posición actual |
+| \(V_2\) | Cuota de voto con la nueva posición propuesta |
+| \(T\) | Temperatura (volatilidad); \(T\) alto permite aceptar cambios que reducen la cuota |
 
 ---
 
-##  Sociodemografía de los Agentes
+## Sociodemografía de los Agentes
 
-Los agentes se inicializan con los siguientes atributos, calibrados con datos del INEGI y encuestas nacionales:
+Los agentes se inicializan con atributos calibrados con datos del INEGI y encuestas nacionales:
 
-| Atributo      | Descripción                                                                 | Valores / Escala                           |
-|---------------|-----------------------------------------------------------------------------|--------------------------------------------|
-| **Educación** | Nivel educativo máximo alcanzado                                            | Primaria, Secundaria, Bachillerato, Licenciatura, Posgrado |
-| **Edad**      | Años cumplidos                                                              | 18-29, 30-44, 45-59, 60+                   |
-| **Vivienda**  | Condiciones de la vivienda (acceso a servicios, material, hacinamiento)     | Índice compuesto (0-1)                     |
-| **Ideología** | Autoubicación en escala izquierda-derecha                                   | Escala continua 0 (izquierda) a 10 (derecha) |
+| Atributo | Descripción | Valores / Escala |
+|---|---|---|
+| **Educación** | Nivel educativo máximo | Primaria, Secundaria, Bachillerato, Licenciatura, Posgrado |
+| **Edad** | Años cumplidos | 18-29, 30-44, 45-59, 60+ |
+| **Vivienda** | Índice compuesto de condiciones | 0–1 |
+| **Ideología** | Autoubicación izquierda-derecha | Continua 0–10 |
 
-La probabilidad inicial de voto por un candidato $c$ se modela como una función logística (softmax):
+La probabilidad inicial de voto por el candidato \(c\) sigue una función logística (softmax):
 
 $$
 P(v_i = c) = \frac{\exp\left(\beta_c^\top z_i\right)}{\sum_{k \in \mathcal{C}} \exp\left(\beta_k^\top z_i\right)}
 $$
 
-donde:
-- $z_i$ es el vector de atributos sociodemográficos del agente $i$.
-- $\beta_c$ son los coeficientes específicos del candidato $c$ (estimados con encuestas).
-- $\mathcal{C}$ es el conjunto de candidatos.
+| Variable | Significado |
+|---|---|
+| \(P(v_i = c)\) | Probabilidad de que el agente \(i\) vote por el candidato \(c\) |
+| \(z_i\) | Vector de atributos sociodemográficos del agente \(i\) (educación, edad, vivienda, ideología) |
+| \(\beta_c\) | Vector de coeficientes del candidato \(c\) (estimados con encuestas) |
+| \(\beta_c^\top z_i\) | Producto punto: utilidad latente del candidato \(c\) para el agente \(i\) |
+| \(\mathcal{C}\) | Conjunto de candidatos |
 
-Estos atributos modulan además:
-- La **susceptibilidad al cambio** durante la campaña.
-- El **tamaño y composición de su red social**.
-- El **umbral de tolerancia $\epsilon$** en la interacción social.
+Estos atributos modulan además la susceptibilidad al cambio, el tamaño de la red social y el umbral de tolerancia \(\epsilon\).
 
 ---
 
-##  Sistema Electoral: Elecciones Presidenciales en México
+## Sistema Electoral: Elecciones Presidenciales en México
 
-El modelo se enfoca en la elección presidencial mexicana, considerando:
-- **Candidatos y partidos:** coaliciones y partidos políticos vigentes.
+El modelo se enfoca en la elección presidencial mexicana considerando:
+
+- **Candidatos y partidos:** coaliciones y partidos vigentes.
 - **Reglas:** mayoría relativa en una sola vuelta (sin segunda vuelta).
 - **Territorio:** 300 distritos electorales, 32 entidades federativas.
-- **Calendario:** duración de campaña (aprox. 90 días) y eventos clave (debates, cierres de campaña).
+- **Calendario:** campaña de aprox. 90 días con eventos clave (debates, cierres).
 
 La regla de decisión final es:
 
@@ -205,6 +219,27 @@ $$
 \text{Ganador} = \arg\max_{c \in \mathcal{C}} \; V_{\text{nacional}}(c)
 $$
 
-donde $V_{\text{nacional}}(c)$ es la suma de votos simulados para el candidato $c$ en todas las secciones electorales.
+| Variable | Significado |
+|---|---|
+| \(\text{Ganador}\) | Candidato que obtiene la victoria |
+| \(\mathcal{C}\) | Conjunto de candidatos |
+| \(V_{\text{nacional}}(c)\) | Suma de votos simulados para el candidato \(c\) en todas las secciones electorales |
+| \(\arg\max\) | Operador que devuelve el candidato con mayor \(V_{\text{nacional}}\) |
 
 ---
+
+## Fuentes Consultadas
+
+- Barabási, A.-L., Albert, R., & Jeong, H. (1999). Mean-field theory for scale-free random networks. *Physica A*, 272(1–2), 173–187.
+- Watts, D. J., & Strogatz, S. H. (1998). Collective dynamics of 'small-world' networks. *Nature*, 393, 440–442.
+- Hegselmann, R., & Krause, U. (2002). Opinion dynamics and bounded confidence models, analysis, and simulation. *Journal of Artificial Societies and Social Simulation*, 5(3).
+- Deffuant, G., Neau, D., Amblard, F., & Weisbuch, G. (2000). Mixing beliefs among interacting agents. *Advances in Complex Systems*, 3, 87–98.
+- Campbell, C., & Ackland, G. J. (2026). A computational model of spatial politics: Hotelling-downs model as statistical physics. *PLOS One*, 21(6), e0352242.
+- Metropolis, N., Rosenbluth, A. W., Rosenbluth, M. N., Teller, A. H., & Teller, E. (1953). Equation of state calculations by fast computing machines. *The Journal of Chemical Physics*, 21(6), 1087–1092.
+- Agent-based Simulation of District-based Elections. (2023). *arXiv*.
+- Instituto Nacional Electoral (INE). (2024). *Estudio Muestral de Participación Ciudadana 2024*.
+- Instituto Nacional de Estadística y Geografía (INEGI). (2025). *Encuesta Intercensal 2025*.
+
+---
+
+**Nota:** Las ecuaciones y conceptos presentados sintetizan los marcos teóricos de las fuentes anteriores y se adaptan al contexto específico de la elección presidencial mexicana.
