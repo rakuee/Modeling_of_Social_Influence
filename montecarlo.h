@@ -23,7 +23,7 @@ typedef struct {
 /* ---------- Parámetros de un escenario: theta^(r) ---------- */
 
 typedef struct {
-    double mean_ideo;                    /* media ideológica       */
+    double mu_ideo;                    /* media ideológica       */
     double sigma_ideo;                 /* dispersión ideológica  */
     double turnout_prob;               /* prob. de votar         */
     double urban_prob;                 /* prob. de ser urbano    */
@@ -55,5 +55,14 @@ typedef struct {
 } Estimate;
 
 int read_config(Config *cfg);
+
+/* ---------- Generador de números aleatorios ---------- */
+void rng_seed(unsigned long long s);       /* fija la semilla */
+double rand_uniform(void);                 /* uniforme* [0,1) */
+double rand_normal(double mu, double sd);  /* normal N(mu, sd^2) */
+
+/* ---------- Muestreo de escenarios ---------- */
+void sample_theta(Theta *th, int C);
+
 
 #endif /* MONTECARLO_H */
